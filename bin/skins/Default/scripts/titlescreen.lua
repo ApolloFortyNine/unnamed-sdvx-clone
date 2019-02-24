@@ -49,7 +49,9 @@ render = function(deltaTime)
     buttonY = resy / 2;
     hovered = nil;
     gfx.LoadSkinFont("segoeui.ttf");
-    draw_button("Start", resx / 2, buttonY, Menu.Start);
+    draw_button("Singleplayer", resx / 2, buttonY, Menu.Singleplayer);
+    buttonY = buttonY + 100;
+    draw_button("Multiplayer", resx / 2, buttonY, Menu.Multiplayer);
     buttonY = buttonY + 100;
     draw_button("Settings", resx / 2, buttonY, Menu.Settings);
     buttonY = buttonY + 100;

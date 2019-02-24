@@ -39,7 +39,13 @@ private:
 		g_application->AddTickable(SongSelect::Create());
 	}
 
-	int lStart(lua_State* L)
+	int lSingleplayer(lua_State* L)
+	{
+		Start();
+		return 0;
+	}
+
+	int lMultiplayer(lua_State* L)
 	{
 		Start();
 		return 0;
@@ -93,7 +99,8 @@ public:
 		m_luaBinds = new LuaBindable(m_lua, "Menu");
 		m_luaBinds->AddFunction("Exit", this, &TitleScreen_Impl::lExit);
 		m_luaBinds->AddFunction("Settings", this, &TitleScreen_Impl::lSettings);
-		m_luaBinds->AddFunction("Start", this, &TitleScreen_Impl::lStart);
+		m_luaBinds->AddFunction("Multiplayer", this, &TitleScreen_Impl::lMultiplayer);
+		m_luaBinds->AddFunction("Singleplayer", this, &TitleScreen_Impl::lSingleplayer);
 		m_luaBinds->Push();
 		lua_settop(m_lua, 0);
 		g_gameWindow->OnMousePressed.Add(this, &TitleScreen_Impl::MousePressed);

@@ -10,7 +10,7 @@
 
 const float Track::trackWidth = 1.0f;
 const float Track::buttonWidth = 1.0f / 6;
-const float Track::laserWidth = buttonWidth * 0.7f;
+const float Track::laserWidth = buttonWidth;
 const float Track::fxbuttonWidth = buttonWidth * 2;
 const float Track::buttonTrackWidth = buttonWidth * 4;
 
@@ -43,16 +43,6 @@ bool Track::AsyncLoad()
 {
 	loader = new AsyncAssetLoader();
 	String skin = g_gameConfig.GetString(GameConfigKeys::Skin);
-	// Load laser colors
-
-	// Old laser coloring
-	/*
-	Image laserColorPalette;
-	CheckedLoad(laserColorPalette = ImageRes::Create("skins/" + skin + "/textures/lasercolors.png"));
-	assert(laserColorPalette->GetSize().x >= 2);
-	for(uint32 i = 0; i < 2; i++)
-		laserColors[i] = laserColorPalette->GetBits()[i];
-	*/
 
 	float laserHues[2] = { 0.f };
 	laserHues[0] = g_gameConfig.GetFloat(GameConfigKeys::Laser0Color);
@@ -70,14 +60,11 @@ bool Track::AsyncLoad()
 
 	// mip-mapped and anisotropicaly filtered track textures
 	loader->AddTexture(trackTexture, "track.png");
-	loader->AddTexture(trackDarkTexture, "track_dark.png");
 	loader->AddTexture(trackTickTexture, "tick.png");
 
 	// Scoring texture
-	loader->AddTexture(scoreBarTexture, "scorebar.png");
 	loader->AddTexture(scoreHitTexture, "scorehit.png");
 
-	loader->AddTexture(laserPointerTexture, "pointer.png"); 
 
 	for(uint32 i = 0; i < 3; i++)
 	{
@@ -179,7 +166,6 @@ bool Track::AsyncFinalize()
 
 	// Generate simple planes for the playfield track and elements
 	trackMesh = MeshGenerators::Quad(g_gl, Vector2(-trackWidth * 0.5f, -trackLength), Vector2(trackWidth, trackLength * 2));
-	trackDarkMesh = MeshGenerators::Quad(g_gl, Vector2(-trackWidth, -trackLength), Vector2(trackWidth * 2, trackLength));
 	trackTickMesh = MeshGenerators::Quad(g_gl, Vector2(-buttonTrackWidth * 0.5f, 0.0f), Vector2(buttonTrackWidth, trackTickLength));
 	centeredTrackMesh = MeshGenerators::Quad(g_gl, Vector2(-0.5f, -0.5f), Vector2(1.0f, 1.0f));
 
@@ -465,12 +451,6 @@ void Track::DrawObjectState(RenderQueue& rq, class BeatmapPlayback& playback, Ob
 }
 void Track::DrawOverlays(class RenderQueue& rq)
 {
-	/// TODO: Move crit line and maybe cursors to UI layer 
-	Vector2 barSize = Vector2(trackWidth * 1.4f, 1.0f);
-	barSize.y = scoreBarTexture->CalculateHeight(barSize.x);
-
-	DrawSprite(rq, Vector3(0.0f, 0.0f, 0.0f), barSize, scoreBarTexture, Color::White, 0.0f);
-
 	// Draw button hit effect sprites
 	for(auto& hfx : m_hitEffects)
 	{
@@ -478,19 +458,6 @@ void Track::DrawOverlays(class RenderQueue& rq)
 	}
 	if(timedHitEffect->time > 0.0f)
 		timedHitEffect->Draw(rq);
-
-	// Draw laser pointers
-	for(uint32 i = 0; i < 2; i++)
-	{
-		float pos = laserPositions[i];
-		if (lasersAreExtend[i])
-			pos = pos * 2.0f - 0.5f;
-		Vector2 objectSize = Vector2(buttonWidth * 0.7f, 0.0f);
-		objectSize.y = laserPointerTexture->CalculateHeight(objectSize.x);
-		DrawSprite(rq, Vector3(pos - trackWidth * 0.5f, 0.0f, 0.0f), objectSize, laserPointerTexture, laserColors[i].WithAlpha(laserPointerOpacity[i]));
-		/// TODO: Draw alerts on HUD instead of in game world.
-		// DrawSprite(rq, Vector3(-trackWidth + trackWidth * i * 2.0f, 0.1f, 0.0f), objectSize * 3, laserAlertTextures[i], laserColors[i].WithAlpha(laserAlertOpacity[i]), 0.0f);
-	}
 }
 void Track::DrawTrackOverlay(RenderQueue& rq, Texture texture, float heightOffset /*= 0.05f*/, float widthScale /*= 1.0f*/)
 {
@@ -500,16 +467,6 @@ void Track::DrawTrackOverlay(RenderQueue& rq, Texture texture, float heightOffse
 	transform *= Transform::Scale({ widthScale, 1.0f, 1.0f });
 	transform *= Transform::Translation({ 0.0f, heightOffset, 0.0f });
 	rq.Draw(transform, trackMesh, trackOverlay, params);
-}
-void Track::DrawDarkTrack(RenderQueue & rq)
-{
-	// Base
-	MaterialParameterSet params;
-	Transform transform = trackOrigin;
-	//transform *= Transform::Translation({ 0.0f, 0.0f, 0.1f });
-	params.SetParameter("mainTex", trackDarkTexture);
-	params.SetParameter("hasSample", false);
-	rq.Draw(transform, trackDarkMesh, buttonMaterial, params);
 }
 void Track::DrawSprite(RenderQueue& rq, Vector3 pos, Vector2 size, Texture tex, Color color /*= Color::White*/, float tilt /*= 0.0f*/)
 {

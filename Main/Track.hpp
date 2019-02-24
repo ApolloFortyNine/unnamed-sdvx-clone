@@ -49,8 +49,6 @@ public:
 	void DrawOverlays(RenderQueue& rq);
 	// Draws a plane over the track
 	void DrawTrackOverlay(RenderQueue& rq, Texture texture, float heightOffset = 0.05f, float widthScale = 1.0f);
-	// Draws the dark overlay behind the critical line
-	void DrawDarkTrack(RenderQueue& rq);
 	// Draw a centered sprite at pos, relative from the track
 	void DrawSprite(RenderQueue& rq, Vector3 pos, Vector2 size, Texture tex, Color color = Color::White, float tilt = 0.0f);
 	void DrawCombo(RenderQueue& rq, uint32 score, Color color, float scale = 1.0f);
@@ -85,11 +83,9 @@ public:
 
 	/* Track base graphics */
 	Mesh trackMesh;
-	Mesh trackDarkMesh;
 	Mesh trackTickMesh;
 	Material trackMaterial; // Also used for buttons
 	Texture trackTexture;
-	Texture trackDarkTexture;
 	Texture trackTickTexture;
 
 	/* Object graphics */
@@ -111,9 +107,7 @@ public:
 	Material trackOverlay;
 
 	/* Scoring and feedback elements */
-	Texture scoreBarTexture;
 	Texture scoreHitTexture;
-	Texture laserPointerTexture;
 	Texture scoreHitTextures[3]; // Ok, Miss, Perfect
 	// Combo counter sprite sheet
 	Mesh comboSpriteMeshes[10];

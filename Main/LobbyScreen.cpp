@@ -1,6 +1,5 @@
 #include "stdafx.h"
-#include "TitleScreen.hpp"
-#include "MultiplayerScreen.hpp"
+#include "LobbyScreen.hpp"
 #include "Application.hpp"
 #include "TransitionScreen.hpp"
 #include "SettingsScreen.hpp"
@@ -18,55 +17,44 @@
 #include "lua.hpp"
 #include "Shared/LuaBindable.hpp"
 
-class TitleScreen_Impl : public TitleScreen
+class LobbyScreen_Impl : public LobbyScreen
 {
 private:
 	lua_State* m_lua = nullptr;
 	LuaBindable* m_luaBinds;
 
-	void Exit()
+	void Quit()
 	{
-		g_application->Shutdown();
+		g_application->RemoveTickable(this);
 	}
 
-	int lExit(lua_State* L)
+	int lQuit(lua_State* L)
 	{
-		Exit();
+		Quit();
 		return 0;
 	}
 
-	void Singleplayer()
-	{
-		g_application->AddTickable(SongSelect::Create());
-	}
+	//void CreateGame()
+	//{
+	//	g_application->AddTickable(SongSelect::Create());
+	//}
 
-	int lSingleplayer(lua_State* L)
-	{
-		Singleplayer();
-		return 0;
-	}
-	
-	void Multiplayer()
-	{
-		g_application->AddTickable(MultiplayerScreen::Create());
-	}
+	//int lCreateGame(lua_State* L)
+	//{
+	//	CreateGame();
+	//	return 0;
+	//}
 
-	int lMultiplayer(lua_State* L)
-	{
-		Multiplayer();
-		return 0;
-	}
+	//void JoinGame()
+	//{
+	//	g_application->AddTickable(SettingsScreen::Create());
+	//}
 
-	void Settings()
-	{
-		g_application->AddTickable(SettingsScreen::Create());
-	}
-
-	int lSettings(lua_State* L)
-	{
-		Settings();
-		return 0;
-	}
+	//int lJoinGame(lua_State* L)
+	//{
+	//	JoinGame();
+	//	return 0;
+	//}
 
 	void MousePressed(MouseButton button)
 	{
@@ -85,19 +73,19 @@ private:
 public:
 	bool Init()
 	{
-		CheckedLoad(m_lua = g_application->LoadScript("titlescreen"));
-		m_luaBinds = new LuaBindable(m_lua, "Menu");
-		m_luaBinds->AddFunction("Exit", this, &TitleScreen_Impl::lExit);
-		m_luaBinds->AddFunction("Settings", this, &TitleScreen_Impl::lSettings);
-		m_luaBinds->AddFunction("Multiplayer", this, &TitleScreen_Impl::lMultiplayer);
-		m_luaBinds->AddFunction("Singleplayer", this, &TitleScreen_Impl::lSingleplayer);
+		CheckedLoad(m_lua = g_application->LoadScript("lobby"));
+		m_luaBinds = new LuaBindable(m_lua, "LobbyButtons");
+		m_luaBinds->AddFunction("Quit", this, &LobbyScreen_Impl::lQuit);
 		m_luaBinds->Push();
 		lua_settop(m_lua, 0);
-		g_gameWindow->OnMousePressed.Add(this, &TitleScreen_Impl::MousePressed);
+		g_gameWindow->OnMousePressed.Add(this, &LobbyScreen_Impl::MousePressed);
 		return true;
 	}
-	~TitleScreen_Impl()
+	~LobbyScreen_Impl()
 	{
+		g_gameWindow->OnMousePressed.RemoveAll(this);
+		if (m_lua)
+			g_application->DisposeLua(m_lua);
 	}
 
 	virtual void Render(float deltaTime)
@@ -121,17 +109,15 @@ public:
 	{
 		g_gameWindow->SetCursorVisible(true);
 		g_application->ReloadSkin();
-		g_application->ReloadScript("titlescreen", m_lua);
+		g_application->ReloadScript("lobby", m_lua);
 		m_luaBinds->Push();
 		lua_settop(m_lua, 0);
-		g_application->DiscordPresenceMenu("Title Screen");
+		g_application->DiscordPresenceMenu("Lobby Screen");
 	}
-
-
 };
 
-TitleScreen* TitleScreen::Create()
+LobbyScreen* LobbyScreen::Create()
 {
-	TitleScreen_Impl* impl = new TitleScreen_Impl();
+	LobbyScreen_Impl* impl = new LobbyScreen_Impl();
 	return impl;
 }

@@ -9,6 +9,16 @@ local label = -1;
 gfx.GradientColors(0,128,255,255,0,128,255,0)
 local gradient = gfx.LinearGradient(0,0,0,1)
 
+-- Multiplayer rectanlge variables
+multiplayer_lobby_rect = 300
+
+-- Player slot vars
+player_slot_starting_y = 105
+player_slot_height = 32
+player_slot_left_border = 20
+player_slot_y_space = 8
+num_players = 8
+
 mouse_clipped = function(x,y,w,h)
     return mposx > x and mposy > y and mposx < x+w and mposy < y+h;
 end;
@@ -38,35 +48,57 @@ draw_button = function(name, x, y, hoverindex)
     gfx.Text(name, x, y);
 end;
 
+draw_player_slots = function(resx, resy, ypos)
+    -- Rectangle
+    gfx.FillColor(240, 240, 245,50);
+    gfx.Rect(player_slot_left_border,ypos,(6*resx)/10,player_slot_height);
+    gfx.Fill();
+    gfx.BeginPath();
+end;
+
 render = function(deltaTime)
     resx,resy = game.GetResolution();
     mposx,mposy = game.GetMousePos();
-    gfx.Scale(resx, resy / 3)
-    gfx.Rect(0,0,1,1)
-    gfx.FillPaint(gradient)
-    gfx.Fill()
-    gfx.ResetTransform()
-    gfx.BeginPath()
-    buttonY = resy / 2;
+    gfx.Scale(resx, resy / 3);
+
+    -- Background
+    gfx.Rect(0,0,1,1);
+    gfx.FillPaint(gradient);
+    gfx.Fill();
+    gfx.ResetTransform();
+    gfx.BeginPath();
+
+    -- quitButtonY = 5 * resy / 6;
     hovered = nil;
     gfx.LoadSkinFont("segoeui.ttf");
-    draw_button("Quit", resx / 2, buttonY, LobbyButtons.Quit);
+
+    -- Multiplayer Lobby Rectangle
+    gfx.Translate(5,5) --upper left margin
+    gfx.FillColor(30,30,47,200);
+    gfx.Rect(0,0,multiplayer_lobby_rect,70);
+    gfx.Fill();
+    -- Multiplayer Lobby Rectangle Text
+	gfx.FillColor(255,255,255);
+    gfx.FontSize(42);
+    gfx.Text("Multiplayer Lobby", 10, 35);
     gfx.BeginPath();
-    gfx.FillColor(255,255,255);
-    gfx.FontSize(120);
-    if label == -1 then
-        label = gfx.CreateLabel("unnamed_sdvx_clone", 120, 0);
+    gfx.FontSize(28);
+    gfx.Text(string.format("%.1i", 18247126512642), 10, 60);
+    gfx.BeginPath();
+
+    -- Draw Player Slots
+    for i = player_slot_starting_y, player_slot_starting_y + (num_players * (player_slot_y_space + player_slot_height)), 
+    				player_slot_y_space + player_slot_height do
+	    draw_player_slots(resx, resy, i);
     end
-    gfx.TextAlign(gfx.TEXT_ALIGN_CENTER + gfx.TEXT_ALIGN_MIDDLE);
-    gfx.DrawLabel(label, resx / 2, resy / 2 - 200, resx-40);
-    updateUrl, updateVersion = game.UpdateAvailable()
-    if updateUrl then
-       gfx.BeginPath()
-       gfx.TextAlign(gfx.TEXT_ALIGN_BOTTOM + gfx.TEXT_ALIGN_LEFT)
-       gfx.FontSize(30)
-       gfx.Text(string.format("Version %s is now available", updateVersion), 5, resy - buttonHeight - 10)
-       draw_button("View", buttonWidth / 2 + 5, resy - buttonHeight / 2 - 5, 4);
-    end
+
+    -- Song Select
+    draw_button("Song Select", resx - buttonWidth, (resy/2)+30, LobbyButtons.SongSelectMulti);
+    gfx.BeginPath();
+
+    -- Quit Button
+    draw_button("Quit", resx - buttonWidth, resy - buttonHeight, LobbyButtons.Quit);
+    gfx.BeginPath();
 end;
 
 mouse_pressed = function(button)

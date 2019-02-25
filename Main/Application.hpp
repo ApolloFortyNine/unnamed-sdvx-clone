@@ -22,6 +22,9 @@ public:
 	Application();
 	~Application();
 
+	// Last selected map id
+	int MapIndex_selected = -1;
+
 	struct CachedJacketImage
 	{
 		float lastUsage;

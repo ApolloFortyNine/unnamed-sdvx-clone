@@ -16,6 +16,7 @@
 #include "Shared/Enum.hpp"
 #include "lua.hpp"
 #include "Shared/LuaBindable.hpp"
+#include <iostream>
 
 class LobbyScreen_Impl : public LobbyScreen
 {
@@ -34,27 +35,20 @@ private:
 		return 0;
 	}
 
-	//void CreateGame()
-	//{
-	//	g_application->AddTickable(SongSelect::Create());
-	//}
+	void SongSelectMulti()
+	{
+		//std::cout.rdbuf(stdout);
+		//printf("%d\n", g_application->MapIndex_selected);
+		std::cout << g_application->MapIndex_selected << std::endl;
+		g_application->AddTickable(SongSelect::Create(PlayingMode::Multiplayer));
+		std::cout << g_application->MapIndex_selected << std::endl;
+	}
 
-	//int lCreateGame(lua_State* L)
-	//{
-	//	CreateGame();
-	//	return 0;
-	//}
-
-	//void JoinGame()
-	//{
-	//	g_application->AddTickable(SettingsScreen::Create());
-	//}
-
-	//int lJoinGame(lua_State* L)
-	//{
-	//	JoinGame();
-	//	return 0;
-	//}
+	int lSongSelectMulti(lua_State* L)
+	{
+		SongSelectMulti();
+		return 0;
+	}
 
 	void MousePressed(MouseButton button)
 	{
@@ -76,6 +70,7 @@ public:
 		CheckedLoad(m_lua = g_application->LoadScript("lobby"));
 		m_luaBinds = new LuaBindable(m_lua, "LobbyButtons");
 		m_luaBinds->AddFunction("Quit", this, &LobbyScreen_Impl::lQuit);
+		m_luaBinds->AddFunction("SongSelectMulti", this, &LobbyScreen_Impl::lSongSelectMulti);
 		m_luaBinds->Push();
 		lua_settop(m_lua, 0);
 		g_gameWindow->OnMousePressed.Add(this, &LobbyScreen_Impl::MousePressed);

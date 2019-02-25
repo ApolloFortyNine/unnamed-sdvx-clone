@@ -66,10 +66,8 @@ private:
 	{
 		if (IsSuspended())
 			return;
-		//lua_settop(m_lua, 0);
 		lua_getglobal(m_lua, "mouse_pressed");
 		lua_pushnumber(m_lua, (int32)button);
-		//lua_call(m_lua, 1, 1);
 		if (lua_pcall(m_lua, 1, 1, 0) != 0)
 		{
 			Logf("Lua error on mouse_pressed: %s", Logger::Error, lua_tostring(m_lua, -1));

@@ -977,6 +977,8 @@ private:
 	Timer m_dbUpdateTimer;
 	MapDatabase m_mapDatabase;
 
+	// Mode for selection (singleplayer / multiplayer)
+	PlayingMode playing_mode;
 	// Map selection wheel
 	Ref<SelectionWheel> m_selectionWheel;
 	// Filter selection
@@ -1047,6 +1049,10 @@ public:
 		g_audio->SetGlobalVolume(g_gameConfig.GetFloat(GameConfigKeys::MasterVolume));
 
 		return true;
+	}
+	SongSelect_Impl(PlayingMode mode)
+	{
+		playing_mode = mode;
 	}
 	~SongSelect_Impl()
 	{
@@ -1136,22 +1142,31 @@ public:
 			{
 				bool autoplay = (g_gameWindow->GetModifierKeys() & ModifierKeys::Ctrl) == ModifierKeys::Ctrl;
 				MapIndex* map = m_selectionWheel->GetSelection();
+				g_application->MapIndex_selected = map->id;
 				if (map)
 				{
 					DifficultyIndex* diff = m_selectionWheel->GetSelectedDifficulty();
-
-					Game* game = Game::Create(*diff, m_settingsWheel->GetGameFlags());
-					if (!game)
+					
+					if (playing_mode == PlayingMode::Singleplayer)
 					{
-						Logf("Failed to start game", Logger::Error);
-						return;
-					}
-					game->GetScoring().autoplay = autoplay;
-					m_suspended = true;
+						Game* game = Game::Create(*diff, m_settingsWheel->GetGameFlags());
+						if (!game)
+						{
+							Logf("Failed to start game", Logger::Error);
+							return;
+						}
+						game->GetScoring().autoplay = autoplay;
+						m_suspended = true;
 
-					// Transition to game
-					TransitionScreen* transistion = TransitionScreen::Create(game);
-					g_application->AddTickable(transistion);
+						// Transition to game
+						TransitionScreen* transistion = TransitionScreen::Create(game);
+						g_application->AddTickable(transistion);
+					}
+					else
+					{
+						m_suspended = true;
+						g_application->RemoveTickable(this);
+					}
 				}
 			}
         }
@@ -1503,6 +1518,11 @@ public:
 
 SongSelect* SongSelect::Create()
 {
-	SongSelect_Impl* impl = new SongSelect_Impl();
+	return Create(PlayingMode::Singleplayer);
+}
+
+SongSelect* SongSelect::Create(PlayingMode mode)
+{
+	SongSelect_Impl* impl = new SongSelect_Impl(mode);
 	return impl;
 }

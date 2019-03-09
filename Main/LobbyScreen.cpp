@@ -17,12 +17,16 @@
 #include "lua.hpp"
 #include "Shared/LuaBindable.hpp"
 #include <iostream>
+#include "Beatmap/MapDatabase.hpp"
+#include "SongFilter.hpp"
 
 class LobbyScreen_Impl : public LobbyScreen
 {
 private:
 	lua_State* m_lua = nullptr;
 	LuaBindable* m_luaBinds;
+	MapDatabase* m_mapDB;
+	bool m_suspended = false;
 
 	void Quit()
 	{
@@ -35,13 +39,62 @@ private:
 		return 0;
 	}
 
+	//void SetMapDB(MapDatabase* db)
+	//{
+	//	m_mapDB = db;
+	//	for (String p : Path::GetSubDirs(g_gameConfig.GetString(GameConfigKeys::SongFolder)))
+	//	{
+	//		SongFilter* filter = new FolderFilter(p, m_mapDB);
+	//		if (filter->GetFiltered(Map<int32, SongSelectIndex>()).size() > 0)
+	//			AddFilter(filter, FilterType::Folder);
+	//	}
+	//	m_SetLuaTable();
+	//}
+
+	//void AddFilter(SongFilter* filter, FilterType type)
+	//{
+	//	if (type == FilterType::Level)
+	//		m_levelFilters.Add(filter);
+	//	else
+	//		m_folderFilters.Add(filter);
+	//}
+
+	void StartGame()
+	{
+		if (g_application->DifficultyIndex_selected)
+		{
+			Game* game = Game::Create(*g_application->DifficultyIndex_selected, g_application->GameFlags_selected);
+			if (!game)
+			{
+				Logf("Failed to start game", Logger::Error);
+				return;
+			}
+			game->GetScoring().autoplay = false; // look at this more, i changed this
+			m_suspended = true;
+
+			// Transition to game
+			TransitionScreen* transistion = TransitionScreen::Create(game);
+			g_application->AddTickable(transistion);
+		}
+	}
+
+	int lStartGame(lua_State* L)
+	{
+		StartGame();
+		return 0;
+	}
+
 	void SongSelectMulti()
 	{
-		//std::cout.rdbuf(stdout);
-		//printf("%d\n", g_application->MapIndex_selected);
-		std::cout << g_application->MapIndex_selected << std::endl;
 		g_application->AddTickable(SongSelect::Create(PlayingMode::Multiplayer));
-		std::cout << g_application->MapIndex_selected << std::endl;
+		//lua_getglobal(m_lua, "set_map_select");
+		//lua_pushinteger(m_lua, g_application->MapIndex_selected);
+		//if (lua_pcall(m_lua, 1, 0, 0) != 0)
+		//{
+		//	Logf("Lua error on set_index: %s", Logger::Error, lua_tostring(m_lua, -1));
+		//	g_gameWindow->ShowMessageBox("Lua Error on set_index", lua_tostring(m_lua, -1), 0);
+		//	assert(false);
+		//}
 	}
 
 	int lSongSelectMulti(lua_State* L)
@@ -49,6 +102,18 @@ private:
 		SongSelectMulti();
 		return 0;
 	}
+
+	//void m_SetLuaMapIndex()
+	//{
+	//	lua_getglobal(m_lua, "set_index");
+	//	lua_pushinteger(m_lua, m_currentlySelectedLuaMapIndex + 1);
+	//	if (lua_pcall(m_lua, 1, 0, 0) != 0)
+	//	{
+	//		Logf("Lua error on set_index: %s", Logger::Error, lua_tostring(m_lua, -1));
+	//		g_gameWindow->ShowMessageBox("Lua Error on set_index", lua_tostring(m_lua, -1), 0);
+	//		assert(false);
+	//	}
+	//}
 
 	void MousePressed(MouseButton button)
 	{
@@ -63,7 +128,6 @@ private:
 			assert(false);
 		}
 	}
-
 public:
 	bool Init()
 	{
@@ -71,9 +135,22 @@ public:
 		m_luaBinds = new LuaBindable(m_lua, "LobbyButtons");
 		m_luaBinds->AddFunction("Quit", this, &LobbyScreen_Impl::lQuit);
 		m_luaBinds->AddFunction("SongSelectMulti", this, &LobbyScreen_Impl::lSongSelectMulti);
+		m_luaBinds->AddFunction("StartGame", this, &LobbyScreen_Impl::lStartGame);
 		m_luaBinds->Push();
 		lua_settop(m_lua, 0);
 		g_gameWindow->OnMousePressed.Add(this, &LobbyScreen_Impl::MousePressed);
+
+		// borrowed
+		//m_mapDatabase.AddSearchPath(g_gameConfig.GetString(GameConfigKeys::SongFolder));
+
+		//m_mapDatabase.OnMapsAdded.Add(m_selectionWheel.GetData(), &SelectionWheel::OnMapsAdded);
+		//m_mapDatabase.OnMapsUpdated.Add(m_selectionWheel.GetData(), &SelectionWheel::OnMapsUpdated);
+		//m_mapDatabase.OnMapsCleared.Add(m_selectionWheel.GetData(), &SelectionWheel::OnMapsCleared);
+		//m_mapDatabase.OnSearchStatusUpdated.Add(m_selectionWheel.GetData(), &SelectionWheel::OnSearchStatusUpdated);
+		//m_mapDatabase.StartSearching();
+
+		// end
+
 		return true;
 	}
 	~LobbyScreen_Impl()
@@ -99,9 +176,11 @@ public:
 	}
 	virtual void OnSuspend()
 	{
+		m_suspended = true;
 	}
 	virtual void OnRestore()
 	{
+		m_suspended = false;
 		g_gameWindow->SetCursorVisible(true);
 		g_application->ReloadSkin();
 		g_application->ReloadScript("lobby", m_lua);

@@ -17,6 +17,18 @@
 #include "Shared/Enum.hpp"
 #include "lua.hpp"
 #include "Shared/LuaBindable.hpp"
+#include "Shared/easywsclient.hpp"
+#include <thread>
+#include <mutex>
+#include <chrono>
+
+#ifdef _WIN32
+#pragma comment( lib, "ws2_32" )
+#include <WinSock2.h>
+#endif
+
+using std::thread;
+using std::mutex;
 
 class MultiplayerScreen_Impl : public MultiplayerScreen
 {
@@ -87,6 +99,9 @@ public:
 		m_luaBinds->Push();
 		lua_settop(m_lua, 0);
 		g_gameWindow->OnMousePressed.Add(this, &MultiplayerScreen_Impl::MousePressed);
+
+		//Enhance this to take in server from config
+		thread websocket_thread(&MultiplayerScreen_Impl::websocket_loop, this);
 		return true;
 	}
 	~MultiplayerScreen_Impl()
@@ -121,6 +136,38 @@ public:
 		m_luaBinds->Push();
 		lua_settop(m_lua, 0);
 		g_application->DiscordPresenceMenu("Multiplayer Screen");
+	}
+
+	void websocket_loop()
+	{
+		using easywsclient::WebSocket;
+#ifdef _WIN32
+		INT rc;
+		WSADATA wsaData;
+
+		rc = WSAStartup(MAKEWORD(2, 2), &wsaData);
+		if (rc) {
+			printf("WSAStartup Failed.\n");
+			//return 1;
+		}
+#endif
+		//WebSocket::pointer ws = WebSocket::from_url("ws://107.173.67.49:4001/socket/websocket");
+		//WebSocket::pointer ws = WebSocket::from_url("ws://localhost:4000/socket/websocket");
+		std::unique_ptr<WebSocket> ws(WebSocket::from_url("ws://localhost:4000/socket/websocket"));
+		//assert(ws);
+		ws->send("{\"topic\": \"game:lobby\",\"event\" : \"phx_join\",\"payload\" : {},\"ref\" : 0}");
+		ws->send("{\"topic\": \"game:lobby\",\"event\" : \"phx_join\",\"payload\" : {},\"ref\" : 0}");
+		while (ws->getReadyState() != WebSocket::CLOSED) {
+			WebSocket::pointer wsp = &*ws; // <-- because a unique_ptr cannot be copied into a lambda
+			ws->poll();
+//			ws->dispatch([wsp](const std::string & message) {
+//				printf(">>> %s\n", message.c_str());
+//				if (message == "world") { wsp->close(); }
+//			});
+		}
+#ifdef _WIN32
+		WSACleanup();
+#endif
 	}
 };
 

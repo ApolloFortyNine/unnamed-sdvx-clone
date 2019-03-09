@@ -21,6 +21,10 @@
 #include <thread>
 #include <mutex>
 #include <chrono>
+#include <assert.h>
+#include <stdio.h>
+#include <string>
+#include <memory>
 
 #ifdef _WIN32
 #pragma comment( lib, "ws2_32" )

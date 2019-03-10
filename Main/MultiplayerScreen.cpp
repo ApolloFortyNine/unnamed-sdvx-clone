@@ -25,6 +25,7 @@
 #include <stdio.h>
 #include <string>
 #include <memory>
+#include "jansson.h"
 
 #ifdef _WIN32
 #pragma comment( lib, "ws2_32" )
@@ -153,6 +154,8 @@ public:
 		INT rc;
 		WSADATA wsaData;
 
+		//g_application->multiplayerPlayers;
+
 		rc = WSAStartup(MAKEWORD(2, 2), &wsaData);
 		if (rc) {
 			printf("WSAStartup Failed.\n");
@@ -163,16 +166,34 @@ public:
 		//WebSocket::pointer ws = WebSocket::from_url("ws://localhost:4000/socket/websocket");
 		std::unique_ptr<WebSocket> ws(WebSocket::from_url("ws://localhost:4000/socket/websocket"));
 		//assert(ws);
+		//TODO Send version of client in server, so that we can disallow people from joining with an old client
 		ws->send("{\"topic\": \"game:lobby\",\"event\" : \"phx_join\",\"payload\" : {},\"ref\" : 0}");
-		ws->send("{\"topic\": \"game:lobby\",\"event\" : \"phx_join\",\"payload\" : {},\"ref\" : 0}");
+		//ws->send("{\"topic\": \"game:lobby\",\"event\" : \"phx_join\",\"payload\" : {},\"ref\" : 0}");
 		while (ws->getReadyState() != WebSocket::CLOSED) {
 			WebSocket::pointer wsp = &*ws; // <-- because a unique_ptr cannot be copied into a lambda
 			ws->poll();
-			ws->send("{\"topic\": \"game:lobby\",\"event\" : \"phx_join\",\"payload\" : {},\"ref\" : 0}");
-//			ws->dispatch([wsp](const std::string & message) {
-//				printf(">>> %s\n", message.c_str());
-//				if (message == "world") { wsp->close(); }
-//			});
+			//ws->send("{\"topic\": \"game:lobby\",\"event\" : \"phx_join\",\"payload\" : {},\"ref\" : 0}");
+			ws->dispatch([wsp, this](const std::string & message) {
+				json_t *root, *event, *payload;
+				json_error_t error;
+
+				root = json_loads(message.c_str(), 0, &error);
+				if (!root) {
+					return;
+				}
+				event = json_object_get(root, "event");
+				if (!json_is_string(event))
+				{
+					return;
+				}
+				const char *event_text;
+				event_text = json_string_value(event);
+				payload = json_object_get(root, "payload");
+
+				if (strcmp(event_text,"score_update") == 0) {
+					process_score_update(payload);
+				}
+			});
 			if (terminate)
 			{
 				break;
@@ -181,6 +202,35 @@ public:
 #ifdef _WIN32
 		WSACleanup();
 #endif
+	}
+
+	void process_score_update(json_t * payload)
+	{
+		json_t *id, *score, *name;
+		int score_val;
+		std::string id_val, name_val;
+		id = json_object_get(payload, "id");
+		score = json_object_get(payload, "score");
+		name = json_object_get(payload, "name");
+
+		id_val = (std::string) json_string_value(id);
+		score_val = json_integer_value(score);
+		name_val = (std::string) json_string_value(name);
+
+		if (g_application->multiplayerPlayers.count(id_val) == 0)
+		{
+			MultiplayerPlayer *player = new MultiplayerPlayer(id_val, name_val, score_val);
+			g_application->multiplayerPlayers.emplace(id_val, player);
+		}
+		else {
+			MultiplayerPlayer* player = g_application->multiplayerPlayers.at(id_val);
+			player->score = score_val;
+		}
+	}
+
+	void handle_message(const std::string & message)
+	{
+
 	}
 };
 

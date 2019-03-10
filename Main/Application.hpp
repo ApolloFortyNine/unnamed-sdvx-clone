@@ -2,6 +2,7 @@
 #include <Audio/Sample.hpp>
 #include <Shared/Jobs.hpp>
 #include <Shared/Thread.hpp>
+#include "MultiplayerScreen.hpp"
 #define DISCORD_APPLICATION_ID "514489760568573952"
 extern class OpenGL* g_gl;
 extern class GUIState g_guiState;
@@ -92,6 +93,9 @@ public:
 	//if empty: no update avaiable
 	//else: index 0 = url, index 1 = version
 	Vector<String> GetUpdateAvailable();
+
+	//Multiplayer variables
+	Map<std::string, MultiplayerPlayer*> multiplayerPlayers;
 
 private:
 	bool m_LoadConfig();

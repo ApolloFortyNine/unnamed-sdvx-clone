@@ -93,6 +93,8 @@ private:
 	}
 
 public:
+	thread websocket_thread;
+	bool terminate = false;
 	bool Init()
 	{
 		CheckedLoad(m_lua = g_application->LoadScript("multiplayer"));
@@ -105,7 +107,7 @@ public:
 		g_gameWindow->OnMousePressed.Add(this, &MultiplayerScreen_Impl::MousePressed);
 
 		//Enhance this to take in server from config
-		thread websocket_thread(&MultiplayerScreen_Impl::websocket_loop, this);
+		websocket_thread = thread(&MultiplayerScreen_Impl::websocket_loop, this);
 		return true;
 	}
 	~MultiplayerScreen_Impl()
@@ -113,6 +115,8 @@ public:
 		g_gameWindow->OnMousePressed.RemoveAll(this);
 		if (m_lua)
 			g_application->DisposeLua(m_lua);
+		terminate = true;
+		websocket_thread.join();
 	}
 
 	virtual void Render(float deltaTime)
@@ -164,10 +168,15 @@ public:
 		while (ws->getReadyState() != WebSocket::CLOSED) {
 			WebSocket::pointer wsp = &*ws; // <-- because a unique_ptr cannot be copied into a lambda
 			ws->poll();
+			ws->send("{\"topic\": \"game:lobby\",\"event\" : \"phx_join\",\"payload\" : {},\"ref\" : 0}");
 //			ws->dispatch([wsp](const std::string & message) {
 //				printf(">>> %s\n", message.c_str());
 //				if (message == "world") { wsp->close(); }
 //			});
+			if (terminate)
+			{
+				break;
+			}
 		}
 #ifdef _WIN32
 		WSACleanup();

@@ -39,26 +39,6 @@ private:
 		return 0;
 	}
 
-	//void SetMapDB(MapDatabase* db)
-	//{
-	//	m_mapDB = db;
-	//	for (String p : Path::GetSubDirs(g_gameConfig.GetString(GameConfigKeys::SongFolder)))
-	//	{
-	//		SongFilter* filter = new FolderFilter(p, m_mapDB);
-	//		if (filter->GetFiltered(Map<int32, SongSelectIndex>()).size() > 0)
-	//			AddFilter(filter, FilterType::Folder);
-	//	}
-	//	m_SetLuaTable();
-	//}
-
-	//void AddFilter(SongFilter* filter, FilterType type)
-	//{
-	//	if (type == FilterType::Level)
-	//		m_levelFilters.Add(filter);
-	//	else
-	//		m_folderFilters.Add(filter);
-	//}
-
 	void StartGame()
 	{
 		if (g_application->DifficultyIndex_selected)
@@ -84,17 +64,22 @@ private:
 		return 0;
 	}
 
+	void SongSelectEnded()
+	{
+		if (g_application->MapIndex_selected)
+		{
+			m_SetLuaMap();
+			lua_getglobal(m_lua, "has_song_selected_true");
+			if (lua_pcall(m_lua, 0, 0, 0) != 0)
+			{
+				Logf("Lua error on calling has_song_selected_true: %s", Logger::Error, lua_tostring(m_lua, -1));
+			}
+		}
+	}
+
 	void SongSelectMulti()
 	{
 		g_application->AddTickable(SongSelect::Create(PlayingMode::Multiplayer));
-		//lua_getglobal(m_lua, "set_map_select");
-		//lua_pushinteger(m_lua, g_application->MapIndex_selected);
-		//if (lua_pcall(m_lua, 1, 0, 0) != 0)
-		//{
-		//	Logf("Lua error on set_index: %s", Logger::Error, lua_tostring(m_lua, -1));
-		//	g_gameWindow->ShowMessageBox("Lua Error on set_index", lua_tostring(m_lua, -1), 0);
-		//	assert(false);
-		//}
 	}
 
 	int lSongSelectMulti(lua_State* L)
@@ -103,22 +88,18 @@ private:
 		return 0;
 	}
 
-	//void m_SetLuaMapIndex()
-	//{
-	//	lua_getglobal(m_lua, "set_index");
-	//	lua_pushinteger(m_lua, m_currentlySelectedLuaMapIndex + 1);
-	//	if (lua_pcall(m_lua, 1, 0, 0) != 0)
-	//	{
-	//		Logf("Lua error on set_index: %s", Logger::Error, lua_tostring(m_lua, -1));
-	//		g_gameWindow->ShowMessageBox("Lua Error on set_index", lua_tostring(m_lua, -1), 0);
-	//		assert(false);
-	//	}
-	//}
-
 	void MousePressed(MouseButton button)
 	{
 		if (IsSuspended())
 			return;
+
+		lua_getglobal(m_lua, "random_func");
+		lua_pushstring(m_lua, "i'm from c++!");
+		if (lua_pcall(m_lua, 1, 0, 0) != 0)
+		{
+			Logf("Lua error on calling random_func: %s", Logger::Error, lua_tostring(m_lua, -1));
+		}
+
 		lua_getglobal(m_lua, "mouse_pressed");
 		lua_pushnumber(m_lua, (int32)button);
 		if (lua_pcall(m_lua, 1, 1, 0) != 0)
@@ -127,6 +108,144 @@ private:
 			g_gameWindow->ShowMessageBox("Lua Error on mouse_pressed", lua_tostring(m_lua, -1), 0);
 			assert(false);
 		}
+	}
+
+	void m_PushStringToTable(const char* name, const char* data)
+	{
+		lua_pushstring(m_lua, name);
+		lua_pushstring(m_lua, data);
+		lua_settable(m_lua, -3);
+	}
+	void m_PushFloatToTable(const char* name, float data)
+	{
+		lua_pushstring(m_lua, name);
+		lua_pushnumber(m_lua, data);
+		lua_settable(m_lua, -3);
+	}
+	void m_PushIntToTable(const char* name, int data)
+	{
+		lua_pushstring(m_lua, name);
+		lua_pushinteger(m_lua, data);
+		lua_settable(m_lua, -3);
+	}
+
+	void m_SetLuaMap()
+	{
+		//int songIndex = 0;
+		/*for (auto& song : m_SourceCollection())
+		{
+			lua_pushinteger(m_lua, ++songIndex);
+			lua_newtable(m_lua);
+			m_PushStringToTable("title", song.second.GetDifficulties()[0]->settings.title.c_str());
+			m_PushStringToTable("artist", song.second.GetDifficulties()[0]->settings.artist.c_str());
+			m_PushStringToTable("bpm", song.second.GetDifficulties()[0]->settings.bpm.c_str());
+			m_PushIntToTable("id", song.second.GetMap()->id);
+			m_PushStringToTable("path", song.second.GetMap()->path.c_str());
+			int diffIndex = 0;
+			lua_pushstring(m_lua, "difficulties");
+			lua_newtable(m_lua);
+			for (auto& diff : song.second.GetDifficulties())
+			{
+				lua_pushinteger(m_lua, ++diffIndex);
+				lua_newtable(m_lua);
+				auto settings = diff->settings;
+				m_PushStringToTable("jacketPath", Path::Normalize(song.second.GetMap()->path + "/" + settings.jacketPath).c_str());
+				m_PushIntToTable("level", settings.level);
+				m_PushIntToTable("difficulty", settings.difficulty);
+				m_PushIntToTable("id", diff->id);
+				m_PushStringToTable("effector", settings.effector.c_str());
+				m_PushIntToTable("topBadge", Scoring::CalculateBestBadge(diff->scores));
+				lua_pushstring(m_lua, "scores");
+				lua_newtable(m_lua);
+				int scoreIndex = 0;
+				for (auto& score : diff->scores)
+				{
+					lua_pushinteger(m_lua, ++scoreIndex);
+					lua_newtable(m_lua);
+					m_PushFloatToTable("gauge", score->gauge);
+					m_PushIntToTable("flags", score->gameflags);
+					m_PushIntToTable("score", score->score);
+					m_PushIntToTable("perfects", score->crit);
+					m_PushIntToTable("goods", score->almost);
+					m_PushIntToTable("misses", score->miss);
+					m_PushIntToTable("timestamp", score->timestamp);
+					m_PushIntToTable("badge", Scoring::CalculateBadge(*score));
+					lua_settable(m_lua, -3);
+				}
+				lua_settable(m_lua, -3);
+				lua_settable(m_lua, -3);
+			}
+			lua_settable(m_lua, -3);
+			lua_settable(m_lua, -3);
+		}*/
+
+		// broke for
+		//lua_pushinteger(m_lua, ++songIndex);
+		//lua_newtable(m_lua);
+		//m_PushStringToTable("title", g_application->DifficultyIndex_selected->settings.title.c_str());
+		//m_PushStringToTable("artist", g_application->DifficultyIndex_selected->settings.artist.c_str());
+		//m_PushStringToTable("bpm", g_application->DifficultyIndex_selected->settings.bpm.c_str());
+		//m_PushIntToTable("id", g_application->MapIndex_selected->id);
+		//m_PushStringToTable("path", g_application->MapIndex_selected->path.c_str());
+		//int diffIndex = 0;
+		//lua_pushstring(m_lua, "difficulties");
+		//lua_newtable(m_lua);
+
+		//// broke for
+		//lua_pushinteger(m_lua, ++diffIndex);
+		//lua_newtable(m_lua);
+		//auto settings = g_application->DifficultyIndex_selected->settings;
+		//m_PushStringToTable("jacketPath", Path::Normalize(g_application->MapIndex_selected->path + "/" + settings.jacketPath).c_str());
+		//m_PushIntToTable("level", settings.level);
+		//m_PushIntToTable("difficulty", settings.difficulty);
+		//m_PushIntToTable("id", g_application->DifficultyIndex_selected->id);
+		//m_PushStringToTable("effector", settings.effector.c_str());
+		//m_PushIntToTable("topBadge", Scoring::CalculateBestBadge(g_application->DifficultyIndex_selected->scores));
+		//lua_pushstring(m_lua, "scores");
+		//lua_newtable(m_lua);
+		//int scoreIndex = 0;
+		//for (auto& score : g_application->DifficultyIndex_selected->scores)
+		//{
+		//	lua_pushinteger(m_lua, ++scoreIndex);
+		//	lua_newtable(m_lua);
+		//	m_PushFloatToTable("gauge", score->gauge);
+		//	m_PushIntToTable("flags", score->gameflags);
+		//	m_PushIntToTable("score", score->score);
+		//	m_PushIntToTable("perfects", score->crit);
+		//	m_PushIntToTable("goods", score->almost);
+		//	m_PushIntToTable("misses", score->miss);
+		//	m_PushIntToTable("timestamp", score->timestamp);
+		//	m_PushIntToTable("badge", Scoring::CalculateBadge(*score));
+		//	lua_settable(m_lua, -3);
+		//}
+		//lua_settable(m_lua, -3);
+		//lua_settable(m_lua, -3);
+
+		//lua_settable(m_lua, -3);
+		//lua_settable(m_lua, -3);
+		
+		
+		//lua_pushstring(m_lua, "selected_song");
+		lua_newtable(m_lua);
+
+		m_PushStringToTable("title", g_application->DifficultyIndex_selected->settings.title.c_str());
+		m_PushStringToTable("artist", g_application->DifficultyIndex_selected->settings.artist.c_str());
+		m_PushStringToTable("bpm", g_application->DifficultyIndex_selected->settings.bpm.c_str());
+		m_PushIntToTable("id", g_application->MapIndex_selected->id);
+		m_PushStringToTable("path", g_application->MapIndex_selected->path.c_str());
+
+
+
+		auto settings = g_application->DifficultyIndex_selected->settings;
+		m_PushStringToTable("diff_jacketPath", Path::Normalize(g_application->MapIndex_selected->path + "/" + settings.jacketPath).c_str());
+		m_PushIntToTable("diff_level", settings.level);
+		m_PushIntToTable("diff_difficulty", settings.difficulty);
+		m_PushIntToTable("diff_id", g_application->DifficultyIndex_selected->id);
+		m_PushStringToTable("diff_effector", settings.effector.c_str());
+		m_PushIntToTable("diff_topBadge", Scoring::CalculateBestBadge(g_application->DifficultyIndex_selected->scores));
+
+		//lua_settable(m_lua, -3);
+		lua_setglobal(m_lua, "selected_song");
 	}
 public:
 	bool Init()
@@ -187,6 +306,7 @@ public:
 		m_luaBinds->Push();
 		lua_settop(m_lua, 0);
 		g_application->DiscordPresenceMenu("Lobby Screen");
+		SongSelectEnded();
 	}
 };
 

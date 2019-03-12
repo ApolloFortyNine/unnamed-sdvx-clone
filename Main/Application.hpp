@@ -24,7 +24,8 @@ public:
 	Application();
 	~Application();
 
-	// Last selected map id
+	// Last selected map
+	MapIndex* MapIndex_selected = nullptr;
 	DifficultyIndex* DifficultyIndex_selected = nullptr;
 	//GameFlags GameFlags_selected = 0;
 	GameFlags GameFlags_selected = GameFlags::None;

@@ -26,6 +26,11 @@ private:
 
 	void Back()
 	{
+		//g_gameWindow->OnAnyEvent.RemoveAll(this);
+		
+		//g_input.OnButtonReleased.RemoveAll(this);
+		//g_input.Cleanup();
+		//g_input.Init(*g_gameWindow);
 		g_application->RemoveTickable(this);
 	}
 
@@ -116,38 +121,6 @@ public:
 		m_luaBinds->Push();
 		lua_settop(m_lua, 0);
 		g_application->DiscordPresenceMenu("Multiplayer Screen");
-	}
-
-	void websocket_loop()
-	{
-		using easywsclient::WebSocket;
-#ifdef _WIN32
-		INT rc;
-		WSADATA wsaData;
-
-		rc = WSAStartup(MAKEWORD(2, 2), &wsaData);
-		if (rc) {
-			printf("WSAStartup Failed.\n");
-			//return 1;
-		}
-#endif
-		WebSocket::pointer ws = WebSocket::from_url("ws://107.173.67.49:4001/socket/websocket");
-		//WebSocket::pointer ws = WebSocket::from_url("ws://localhost:4000/socket/websocket");
-		//std::unique_ptr<WebSocket> ws(WebSocket::from_url("ws://localhost:4000/socket/websocket"));
-		//assert(ws);
-		ws->send("{\"topic\": \"game:lobby\",\"event\" : \"phx_join\",\"payload\" : {},\"ref\" : 0}");
-		ws->send("{\"topic\": \"game:lobby\",\"event\" : \"phx_join\",\"payload\" : {},\"ref\" : 0}");
-		while (ws->getReadyState() != WebSocket::CLOSED) {
-			WebSocket::pointer wsp = &*ws; // <-- because a unique_ptr cannot be copied into a lambda
-			ws->poll();
-			//          ws->dispatch([wsp](const std::string & message) {
-			//              printf(">>> %s\n", message.c_str());
-			//              if (message == "world") { wsp->close(); }
-			//          });
-		}
-#ifdef _WIN32
-		WSACleanup();
-#endif
 	}
 };
 

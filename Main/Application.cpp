@@ -151,6 +151,8 @@ MapDatabase* Application::m_GetMapDatabase()
 	if (!m_mapDatabase)
 	{
 		m_mapDatabase = new MapDatabase();
+		m_mapDatabase->AddSearchPath(g_gameConfig.GetString(GameConfigKeys::SongFolder));
+		m_mapDatabase->StartSearching();
 	}
 	return m_mapDatabase;
 }

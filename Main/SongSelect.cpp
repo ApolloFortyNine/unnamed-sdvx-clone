@@ -1031,13 +1031,13 @@ public:
 		m_selectionWheel->OnMapSelected.Add(this, &SongSelect_Impl::OnMapSelected);
 		m_selectionWheel->OnDifficultySelected.Add(this, &SongSelect_Impl::OnDifficultySelected);
 		// Setup the map database
-		m_mapDatabase->AddSearchPath(g_gameConfig.GetString(GameConfigKeys::SongFolder));
+		//m_mapDatabase->AddSearchPath(g_gameConfig.GetString(GameConfigKeys::SongFolder));
 
 		m_mapDatabase->OnMapsAdded.Add(m_selectionWheel.GetData(), &SelectionWheel::OnMapsAdded);
 		m_mapDatabase->OnMapsUpdated.Add(m_selectionWheel.GetData(), &SelectionWheel::OnMapsUpdated);
 		m_mapDatabase->OnMapsCleared.Add(m_selectionWheel.GetData(), &SelectionWheel::OnMapsCleared);
 		m_mapDatabase->OnSearchStatusUpdated.Add(m_selectionWheel.GetData(), &SelectionWheel::OnSearchStatusUpdated);
-		m_mapDatabase->StartSearching();
+		//m_mapDatabase->StartSearching();
 
 		m_filterSelection->SetFiltersByIndex(g_gameConfig.GetInt(GameConfigKeys::LevelFilter), g_gameConfig.GetInt(GameConfigKeys::FolderFilter));
 		m_selectionWheel->SelectByMapId(g_gameConfig.GetInt(GameConfigKeys::LastSelected));
@@ -1058,7 +1058,11 @@ public:
 	~SongSelect_Impl()
 	{
 		// Clear callbacks
-		m_mapDatabase->OnMapsCleared.Clear();
+		m_mapDatabase->OnMapsAdded.Remove(m_selectionWheel.GetData(), &SelectionWheel::OnMapsAdded);
+		m_mapDatabase->OnMapsUpdated.Remove(m_selectionWheel.GetData(), &SelectionWheel::OnMapsUpdated);
+		m_mapDatabase->OnMapsCleared.Remove(m_selectionWheel.GetData(), &SelectionWheel::OnMapsCleared);
+		m_mapDatabase->OnSearchStatusUpdated.Remove(m_selectionWheel.GetData(), &SelectionWheel::OnSearchStatusUpdated);
+		//m_mapDatabase->OnMapsCleared.Clear();
 		g_input.OnButtonPressed.RemoveAll(this);
 		g_input.OnButtonReleased.RemoveAll(this);
 		g_gameWindow->OnMouseScroll.RemoveAll(this);
@@ -1146,6 +1150,11 @@ public:
 				if (map)
 				{
 					DifficultyIndex* diff = m_selectionWheel->GetSelectedDifficulty();
+					g_application->MapIndex_selected = map;
+					//if (g_application->DifficultyIndex_selected)
+					//{
+					//	delete g_application->DifficultyIndex_selected;
+					//}
 					g_application->DifficultyIndex_selected = diff;
 					g_application->GameFlags_selected = m_settingsWheel->GetGameFlags();
 

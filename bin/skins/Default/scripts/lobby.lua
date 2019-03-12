@@ -8,6 +8,7 @@ local buttonBorder = 2;
 local label = -1;
 gfx.GradientColors(0,128,255,255,0,128,255,0)
 local gradient = gfx.LinearGradient(0,0,0,1)
+local jacketFallback = gfx.CreateSkinImage("song_select/loading.png", 0)
 
 -- Song Cache
 -- check_or_create_cache = function(song, loadJacket)
@@ -43,6 +44,8 @@ player_slot_left_border = 20
 player_slot_y_space = 8
 num_players = 8
 left_pad = 35
+my_to_change_var = "temp"
+has_song_selected = nil
 
 mouse_clipped = function(x,y,w,h)
     return mposx > x and mposy > y and mposx < x+w and mposy < y+h;
@@ -100,8 +103,6 @@ end;
 -- end
 
 draw_selected = function(song, x, y, w, h)
-    -- check_or_create_cache(song)
-    -- set up padding and margins
     local xPadding = math.floor(w/16)
     local yPadding =  math.floor(h/32)
     local xMargin = math.floor(w/16)
@@ -120,9 +121,8 @@ draw_selected = function(song, x, y, w, h)
       xpos = x+xMargin
       ypos = y+yMargin
     end
+    
     --Border
-    -- local diff = song.difficulties[selectedDiff]
-    -- effector = gfx.CreateLabel(diff.effector,20,0)
     gfx.BeginPath()
     gfx.RoundedRectVarying(xpos,ypos,width,height,yPadding,yPadding,yPadding,yPadding)
     gfx.FillColor(30,30,30)
@@ -139,7 +139,20 @@ draw_selected = function(song, x, y, w, h)
       imageXPos = x+xMargin+xPadding
     end
 
-    -- local temp = gfx.LoadImageJob(diff.jacketPath, jacketFallback, 200,200)
+    if has_song_selected == nil then
+        return;
+    end;
+
+    -- draw_button("somethin", resx - buttonWidth * 3, resy - buttonHeight, LobbyButtons.Quit);
+    -- gfx.BeginPath();
+
+    -- local diff = song.difficulties[selectedDiff]
+    effector = gfx.CreateLabel(selected_song.diff_effector, 20, 0)
+
+    local temp = gfx.LoadImageJob(selected_song.diff_jacketPath, jacketFallback, 200, 200)
+    gfx.ImageRect(imageXPos, y+yMargin+yPadding, imageSize, imageSize, temp, 1, 0)
+
+    gfx.BeginPath();
     -- if not songCache[song.id][selectedDiff] or songCache[song.id][selectedDiff] ==  jacketFallback then
     --     songCache[song.id][selectedDiff] = gfx.LoadImageJob(diff.jacketPath, jacketFallback, 200,200)
     -- end
@@ -158,35 +171,66 @@ draw_selected = function(song, x, y, w, h)
       -- draw_diffs(song.difficulties,(w/2)-(imageSize/2),(ypos+yPadding+imageSize),imageSize,math.floor(height/6))
     -- end
     -- effector / bpm should take up 1/3 of height, full width
-    -- if aspectRatio == "PortraitWidescreen" then
-    --   gfx.FontSize(40)
-    --   gfx.TextAlign(gfx.TEXT_ALIGN_TOP + gfx.TEXT_ALIGN_LEFT)
-    --   gfx.DrawLabel(songCache[song.id]["title"], xpos+xPadding+imageSize, y+yMargin+yPadding, width-imageSize-20)
-    --   gfx.FontSize(30)
-    --   gfx.DrawLabel(songCache[song.id]["artist"], xpos+xPadding+imageSize+3, y+yMargin+yPadding + 45, width-imageSize-20)
-    --   gfx.FontSize(20)
-    --   gfx.DrawLabel(songCache[song.id]["bpm"], xpos+xPadding+imageSize+3, y+yMargin+yPadding + 85, width-imageSize-20)
-    --   gfx.FastText("Effector:", xpos+xPadding+imageSize+3, y+yMargin+yPadding + 115)
-    --   gfx.DrawLabel(effector, xpos+xPadding+imageSize+80, y+yMargin+yPadding + 115, width-imageSize-20)
-    -- else
-    --   gfx.FontSize(40)
-    --   gfx.TextAlign(gfx.TEXT_ALIGN_TOP + gfx.TEXT_ALIGN_LEFT)
-    --   gfx.DrawLabel(songCache[song.id]["title"], xpos+10, (height/10)*6, width-20)
-    --   gfx.FontSize(30)
-    --   gfx.DrawLabel(songCache[song.id]["artist"], xpos+10, (height/10)*6 + 45, width-20)
-    --   gfx.FillColor(255,255,255)
-    --   gfx.FontSize(20)
-    --   gfx.DrawLabel(songCache[song.id]["bpm"], xpos+10, (height/10)*6 + 85)
-    --   gfx.FastText("Effector:",xpos+10, (height/10)*6 + 115)
-    --   gfx.DrawLabel(effector, xpos+85, (height/10)*6 + 115, width-95)
+    if aspectRatio == "PortraitWidescreen" then
+      gfx.FontSize(40)
+      gfx.TextAlign(gfx.TEXT_ALIGN_TOP + gfx.TEXT_ALIGN_LEFT)
+      gfx.DrawLabel(selected_song.title, xpos+xPadding+imageSize, y+yMargin+yPadding, width-imageSize-20)
+      gfx.FontSize(30)
+      gfx.DrawLabel(selected_song.artist, xpos+xPadding+imageSize+3, y+yMargin+yPadding + 45, width-imageSize-20)
+      gfx.FontSize(20)
+      gfx.DrawLabel(selected_song.bpm, xpos+xPadding+imageSize+3, y+yMargin+yPadding + 85, width-imageSize-20)
+      gfx.FastText("Effector:", xpos+xPadding+imageSize+3, y+yMargin+yPadding + 115)
+      gfx.DrawLabel(effector, xpos+xPadding+imageSize+80, y+yMargin+yPadding + 115, width-imageSize-20)
+    else
+      gfx.FontSize(40)
+      gfx.TextAlign(gfx.TEXT_ALIGN_TOP + gfx.TEXT_ALIGN_LEFT)
+      gfx.DrawLabel(gfx.CreateLabel(selected_song.title, 40, 0), xpos+10, (height/10)*6, width-20)
+      gfx.FontSize(30)
+      gfx.DrawLabel(gfx.CreateLabel(selected_song.artist, 25, 0), xpos+10, (height/10)*6 + 45, width-20)
+      gfx.FillColor(255,255,255)
+      gfx.FontSize(20)
+      gfx.DrawLabel(gfx.CreateLabel(string.format("BPM: %s", selected_song.bpm), 20, 0), xpos+10, (height/10)*6 + 85)
+      gfx.FastText("Effector:",xpos+10, (height/10)*6 + 115)
+      gfx.DrawLabel(effector, xpos+85, (height/10)*6 + 115, width-95)
+    end
+
+    -- check_or_create_cache = function(song, loadJacket)
+    -- if not songCache[song.id] then songCache[song.id] = {} end
+
+    -- if not songCache[song.id]["title"] then
+    --     songCache[song.id]["title"] = gfx.CreateLabel(song.title, 40, 0)
     -- end
+
+    -- if not songCache[song.id]["artist"] then
+    --     songCache[song.id]["artist"] = gfx.CreateLabel(song.artist, 25, 0)
+    -- end
+
+    -- if not songCache[song.id]["bpm"] then
+    --     songCache[song.id]["bpm"] = gfx.CreateLabel(string.format("BPM: %s",song.bpm), 20, 0)
+    -- end
+
+    -- if not songCache[song.id]["jacket"] and loadJacket then
+    --     songCache[song.id]["jacket"] = gfx.CreateImage(song.difficulties[1].jacketPath, 0)
+    -- end
+    -- end
+
+
     -- if aspectRatio == "PortraitWidescreen" then
     --   draw_scores(diff, xpos+xPadding+imageSize+3,  (height/3)*2, width-imageSize-20, (height/3)-yPadding)
     -- else
     --   draw_scores(diff, xpos, (height/6)*5, width, (height/6))
     -- end
+
     gfx.ForceRender()
 end
+
+has_song_selected_true = function()
+    has_song_selected = true
+end;
+
+random_func = function(the_input)
+    my_to_change_var = the_input
+end;
 
 render = function(deltaTime)
     resx,resy = game.GetResolution();
@@ -247,6 +291,9 @@ render = function(deltaTime)
     -- Quit Button
     draw_button("Quit", resx - buttonWidth, resy - buttonHeight, LobbyButtons.Quit);
     gfx.BeginPath();
+
+    -- draw_button(my_to_change_var, resx - buttonWidth * 2, resy - buttonHeight, LobbyButtons.Quit);
+    -- gfx.BeginPath();
 end;
 
 set_map_select = function(new_map_id)

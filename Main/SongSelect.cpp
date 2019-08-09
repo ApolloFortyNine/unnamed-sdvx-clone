@@ -975,8 +975,11 @@ class SongSelect_Impl : public SongSelect
 {
 private:
 	Timer m_dbUpdateTimer;
-	MapDatabase m_mapDatabase;
 
+	MapDatabase* m_mapDatabase = g_application->m_GetMapDatabase();
+
+	// Mode for selection (singleplayer / multiplayer)
+	PlayingMode playing_mode;
 	// Map selection wheel
 	Ref<SelectionWheel> m_selectionWheel;
 	// Filter selection
@@ -1024,17 +1027,17 @@ public:
 		m_filterSelection = Ref<FilterSelection>(new FilterSelection(m_selectionWheel));
 		if (!m_filterSelection->Init())
 			return false;
-		m_filterSelection->SetMapDB(&m_mapDatabase);
+		m_filterSelection->SetMapDB(m_mapDatabase);
 		m_selectionWheel->OnMapSelected.Add(this, &SongSelect_Impl::OnMapSelected);
 		m_selectionWheel->OnDifficultySelected.Add(this, &SongSelect_Impl::OnDifficultySelected);
 		// Setup the map database
-		m_mapDatabase.AddSearchPath(g_gameConfig.GetString(GameConfigKeys::SongFolder));
+		//m_mapDatabase->AddSearchPath(g_gameConfig.GetString(GameConfigKeys::SongFolder));
 
-		m_mapDatabase.OnMapsAdded.Add(m_selectionWheel.GetData(), &SelectionWheel::OnMapsAdded);
-		m_mapDatabase.OnMapsUpdated.Add(m_selectionWheel.GetData(), &SelectionWheel::OnMapsUpdated);
-		m_mapDatabase.OnMapsCleared.Add(m_selectionWheel.GetData(), &SelectionWheel::OnMapsCleared);
-		m_mapDatabase.OnSearchStatusUpdated.Add(m_selectionWheel.GetData(), &SelectionWheel::OnSearchStatusUpdated);
-		m_mapDatabase.StartSearching();
+		m_mapDatabase->OnMapsAdded.Add(m_selectionWheel.GetData(), &SelectionWheel::OnMapsAdded);
+		m_mapDatabase->OnMapsUpdated.Add(m_selectionWheel.GetData(), &SelectionWheel::OnMapsUpdated);
+		m_mapDatabase->OnMapsCleared.Add(m_selectionWheel.GetData(), &SelectionWheel::OnMapsCleared);
+		m_mapDatabase->OnSearchStatusUpdated.Add(m_selectionWheel.GetData(), &SelectionWheel::OnSearchStatusUpdated);
+		//m_mapDatabase->StartSearching();
 
 		m_filterSelection->SetFiltersByIndex(g_gameConfig.GetInt(GameConfigKeys::LevelFilter), g_gameConfig.GetInt(GameConfigKeys::FolderFilter));
 		m_selectionWheel->SelectByMapId(g_gameConfig.GetInt(GameConfigKeys::LastSelected));
@@ -1048,10 +1051,18 @@ public:
 
 		return true;
 	}
+	SongSelect_Impl(PlayingMode mode)
+	{
+		playing_mode = mode;
+	}
 	~SongSelect_Impl()
 	{
 		// Clear callbacks
-		m_mapDatabase.OnMapsCleared.Clear();
+		m_mapDatabase->OnMapsAdded.Remove(m_selectionWheel.GetData(), &SelectionWheel::OnMapsAdded);
+		m_mapDatabase->OnMapsUpdated.Remove(m_selectionWheel.GetData(), &SelectionWheel::OnMapsUpdated);
+		m_mapDatabase->OnMapsCleared.Remove(m_selectionWheel.GetData(), &SelectionWheel::OnMapsCleared);
+		m_mapDatabase->OnSearchStatusUpdated.Remove(m_selectionWheel.GetData(), &SelectionWheel::OnSearchStatusUpdated);
+		//m_mapDatabase->OnMapsCleared.Clear();
 		g_input.OnButtonPressed.RemoveAll(this);
 		g_input.OnButtonReleased.RemoveAll(this);
 		g_gameWindow->OnMouseScroll.RemoveAll(this);
@@ -1107,7 +1118,7 @@ public:
 		else
 		{
 			String utf8Search = Utility::ConvertToUTF8(search);
-			Map<int32, MapIndex*> filter = m_mapDatabase.FindMaps(utf8Search);
+			Map<int32, MapIndex*> filter = m_mapDatabase->FindMaps(utf8Search);
 			m_selectionWheel->SetFilter(filter);
 		}
 	}
@@ -1139,19 +1150,34 @@ public:
 				if (map)
 				{
 					DifficultyIndex* diff = m_selectionWheel->GetSelectedDifficulty();
+					g_application->MapIndex_selected = map;
+					//if (g_application->DifficultyIndex_selected)
+					//{
+					//	delete g_application->DifficultyIndex_selected;
+					//}
+					g_application->DifficultyIndex_selected = diff;
+					g_application->GameFlags_selected = m_settingsWheel->GetGameFlags();
 
-					Game* game = Game::Create(*diff, m_settingsWheel->GetGameFlags());
-					if (!game)
+					if (playing_mode == PlayingMode::Singleplayer)
 					{
-						Logf("Failed to start game", Logger::Error);
-						return;
-					}
-					game->GetScoring().autoplay = autoplay;
-					m_suspended = true;
+						Game* game = Game::Create(*diff, m_settingsWheel->GetGameFlags());
+						if (!game)
+						{
+							Logf("Failed to start game", Logger::Error);
+							return;
+						}
+						game->GetScoring().autoplay = autoplay;
+						m_suspended = true;
 
-					// Transition to game
-					TransitionScreen* transistion = TransitionScreen::Create(game);
-					g_application->AddTickable(transistion);
+						// Transition to game
+						TransitionScreen* transistion = TransitionScreen::Create(game);
+						g_application->AddTickable(transistion);
+					}
+					else
+					{
+						m_suspended = true;
+						g_application->RemoveTickable(this);
+					}
 				}
 			}
         }
@@ -1327,7 +1353,7 @@ public:
 			}
 			else if (key == SDLK_F5)
 			{
-				m_mapDatabase.StartSearching();
+				m_mapDatabase->StartSearching();
 				OnSearchTermChanged(m_searchInput->input);
 			}
 			else if (key == SDLK_F2)
@@ -1376,7 +1402,7 @@ public:
 	{
 		if(m_dbUpdateTimer.Milliseconds() > 500)
 		{
-			m_mapDatabase.Update();
+			m_mapDatabase->Update();
 			m_dbUpdateTimer.Restart();
 		}
         
@@ -1477,7 +1503,7 @@ public:
 	{
 		m_suspended = true;
 		m_previewPlayer.Pause();
-		m_mapDatabase.StopSearching();
+		m_mapDatabase->StopSearching();
 		if (m_lockMouse)
 			m_lockMouse.Release();
 
@@ -1487,7 +1513,7 @@ public:
 		g_application->DiscordPresenceMenu("Song Select");
 		m_suspended = false;
 		m_previewPlayer.Restore();
-		m_mapDatabase.StartSearching();
+		m_mapDatabase->StartSearching();
 		OnSearchTermChanged(m_searchInput->input);
 		if (g_gameConfig.GetBool(GameConfigKeys::AutoResetSettings))
 		{
@@ -1503,6 +1529,11 @@ public:
 
 SongSelect* SongSelect::Create()
 {
-	SongSelect_Impl* impl = new SongSelect_Impl();
+	return Create(PlayingMode::Singleplayer);
+}
+
+SongSelect* SongSelect::Create(PlayingMode mode)
+{
+	SongSelect_Impl* impl = new SongSelect_Impl(mode);
 	return impl;
 }

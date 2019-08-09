@@ -145,6 +145,18 @@ void Application::SetUpdateAvailable(const String& version, const String& url)
 	m_hasUpdate = true;
 }
 
+MapDatabase* Application::m_GetMapDatabase()
+{
+	int a;
+	if (!m_mapDatabase)
+	{
+		m_mapDatabase = new MapDatabase();
+		m_mapDatabase->AddSearchPath(g_gameConfig.GetString(GameConfigKeys::SongFolder));
+		m_mapDatabase->StartSearching();
+	}
+	return m_mapDatabase;
+}
+
 Vector<String> Application::GetUpdateAvailable()
 {
 	if (m_hasUpdate) {

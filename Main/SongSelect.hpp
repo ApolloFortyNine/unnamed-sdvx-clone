@@ -48,6 +48,7 @@ private:
 	Vector<DifficultyIndex*> m_diffs;
 };
 
+enum PlayingMode { Singleplayer, Multiplayer };
 
 /*
 	Song select screen
@@ -59,4 +60,5 @@ protected:
 public:
 	virtual ~SongSelect() = default;
 	static SongSelect* Create();
+	static SongSelect* Create(PlayingMode mode);
 };

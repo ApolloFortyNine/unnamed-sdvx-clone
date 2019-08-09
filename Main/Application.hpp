@@ -2,6 +2,8 @@
 #include <Audio/Sample.hpp>
 #include <Shared/Jobs.hpp>
 #include <Shared/Thread.hpp>
+#include <Beatmap/MapDatabase.hpp>
+#include <Game.hpp>
 #define DISCORD_APPLICATION_ID "514489760568573952"
 extern class OpenGL* g_gl;
 extern class GUIState g_guiState;
@@ -21,6 +23,12 @@ class Application
 public:
 	Application();
 	~Application();
+
+	// Last selected map
+	MapIndex* MapIndex_selected = nullptr;
+	DifficultyIndex* DifficultyIndex_selected = nullptr;
+	//GameFlags GameFlags_selected = 0;
+	GameFlags GameFlags_selected = GameFlags::None;
 
 	struct CachedJacketImage
 	{
@@ -85,6 +93,7 @@ public:
 	void DiscordPresenceMenu(String name);
 	void DiscordPresenceSong(const struct BeatmapSettings& song, int64 startTime, int64 endTime);
 	void SetUpdateAvailable(const String& version, const String& url);
+	MapDatabase* m_GetMapDatabase();
 
 	//if empty: no update avaiable
 	//else: index 0 = url, index 1 = version
@@ -102,6 +111,9 @@ private:
 	void m_OnKeyReleased(int32 key);
 	void m_OnWindowResized(const Vector2i& newSize);
 	void m_SetNvgLuaBindings(class lua_State* state);
+
+	// Map DB
+	MapDatabase* m_mapDatabase = nullptr;
 
 	RenderState m_renderStateBase;
 	RenderQueue m_renderQueueBase;

@@ -49,13 +49,11 @@ render = function(deltaTime)
     buttonY = resy / 2;
     hovered = nil;
     gfx.LoadSkinFont("segoeui.ttf");
-    draw_button("Singleplayer", resx / 2, buttonY, Menu.Singleplayer);
+    draw_button("Create Game", resx / 2, buttonY, MultiplayerMenu.CreateGame);
     buttonY = buttonY + 100;
-    draw_button("Multiplayer", resx / 2, buttonY, Menu.Multiplayer);
+    draw_button("Join Game", resx / 2, buttonY, MultiplayerMenu.JoinGame);
     buttonY = buttonY + 100;
-    draw_button("Settings", resx / 2, buttonY, Menu.Settings);
-    buttonY = buttonY + 100;
-    draw_button("Exit", resx / 2, buttonY, Menu.Exit);
+    draw_button("Back", resx / 2, buttonY, MultiplayerMenu.Back);
     gfx.BeginPath();
     gfx.FillColor(255,255,255);
     gfx.FontSize(120);
